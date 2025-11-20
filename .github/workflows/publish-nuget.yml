@@ -1,0 +1,45 @@
+name: Publish NuGet Packages
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build solution
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Run tests
+        run: dotnet test --configuration Release --no-build --verbosity normal
+
+      - name: Pack CQReetMediator
+        run: dotnet pack src/CQReetMediator/CQReetMediator.csproj \
+          --configuration Release --no-build -o ./artifacts
+
+      - name: Pack CQReetMediator.Abstractions
+        run: dotnet pack src/CQReetMediator.Abstractions/CQReetMediator.Abstractions.csproj \
+          --configuration Release --no-build -o ./artifacts
+
+      - name: Pack CQReetMediator.DependencyInjection
+        run: dotnet pack src/CQReetMediator.DependencyInjection/CQReetMediator.DependencyInjection.csproj \
+          --configuration Release --no-build -o ./artifacts
+
+      - name: Publish to NuGet
+        run: dotnet nuget push "./artifacts/*.nupkg" \
+          --api-key ${{ secrets.NUGET_API_KEY }} \
+          --source https://api.nuget.org/v3/index.json \
+          --skip-duplicate
